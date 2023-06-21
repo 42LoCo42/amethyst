@@ -4,7 +4,7 @@ module Main where
 import Flow            ((|>))
 import Text.Megaparsec (MonadParsec (eof), Parsec, errorBundlePretty, runParser)
 
-import Parser (pSymbol)
+import Parser (pEscapedChar)
 
 run :: (Show a) => Parsec Void Text a -> Text -> IO ()
 run p t =
@@ -13,4 +13,4 @@ run p t =
   |> putStrLn
 
 main :: IO ()
-main = run pSymbol "A0b1c2-def\\/ghi"
+main = run pEscapedChar "\\DC3"
