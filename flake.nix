@@ -11,6 +11,13 @@
 
         my-drv = {
           root = ./.;
+        };
+      in
+      {
+        defaultPackage = hpkgs.developPackage my-drv;
+
+        devShell = hpkgs.developPackage (my-drv // {
+          returnShellEnv = true;
           withHoogle = false;
           modifier = drv: pkgs.haskell.lib.addBuildTools drv (
             with pkgs;
@@ -19,14 +26,9 @@
               bashInteractive
               cabal-install
               haskell-language-server
+              hpack
             ]
           );
-        };
-      in
-      {
-        defaultPackage = hpkgs.developPackage my-drv;
-        devShell = hpkgs.developPackage (my-drv // {
-          returnShellEnv = true;
         });
       });
 }

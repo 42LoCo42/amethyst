@@ -1,0 +1,22 @@
+name: amethyst
+version: 0.0.1
+synopsis: A toy pure & functional programming language
+maintainer: Eleonora <leonsch@protonmail.com>
+github: 42LoCo42/amethyst
+
+ghc-options: -Wall
+
+dependencies:
+  - name: base
+    mixin:
+      - hiding (Prelude)
+  - name: relude
+    mixin:
+      - (Relude as Prelude)
+      - ''
+  - flow
+  - megaparsec
+
+executable:
+  main: Main.hs
+  source-dirs: app

@@ -1,27 +1,39 @@
-cabal-version:      3.0
-name:               amethyst
-version:            0.1.0.0
-build-type:         Simple
+cabal-version: 2.0
 
-common warnings
-    ghc-options: -Wall
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
 
-executable example
-    import:           warnings
-    hs-source-dirs:   app
-    default-language: Haskell2010
+name:           amethyst
+version:        0.0.1
+synopsis:       A toy pure & functional programming language
+homepage:       https://github.com/42LoCo42/amethyst#readme
+bug-reports:    https://github.com/42LoCo42/amethyst/issues
+maintainer:     Eleonora <leonsch@protonmail.com>
+build-type:     Simple
 
-    main-is:          Main.hs
-    -- other-modules:
-    -- other-extensions:
+source-repository head
+  type: git
+  location: https://github.com/42LoCo42/amethyst
 
-    build-depends:
-      base,
-      relude,
-      flow,
-      megaparsec,
-
-    mixins:
-      base hiding (Prelude),
-      relude (Relude as Prelude),
-      relude,
+executable amethyst
+  main-is: Main.hs
+  other-modules:
+      Parser
+      Types
+      Paths_amethyst
+  autogen-modules:
+      Paths_amethyst
+  hs-source-dirs:
+      app
+  ghc-options: -Wall
+  build-depends:
+      base
+    , flow
+    , megaparsec
+    , relude
+  mixins:
+      base hiding (Prelude)
+    , relude (Relude as Prelude)
+    , relude 
+  default-language: Haskell2010
