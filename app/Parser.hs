@@ -5,12 +5,22 @@ import Prelude hiding (many, some)
 
 import Flow                 ((.>), (|>))
 import Text.Megaparsec      (MonadParsec (label), Parsec, anySingle, choice,
-                             many, noneOf, oneOf, some, (<?>))
+                             many, noneOf, oneOf, satisfy, some, (<?>))
 import Text.Megaparsec.Char (alphaNumChar, char, hexDigitChar, string)
 
-import Types (AST (..))
+import Data.Char (digitToInt, isDigit, isHexDigit, isOctDigit)
+import Types     (AST (..))
 
 type Parser = Parsec Void Text
+
+pAST :: Parser AST
+pAST = choice
+  [ pChar   <&> ASTChar
+  , pText   <&> ASTText
+  , pInt    <&> ASTInt
+  , pSymbol <&> ASTSymbol ]
+
+-- Utilities -------------------------------------------------------------------
 
 -- | The list of all special characters allowed in a symbol.
 allowedSpecials :: [Char]
@@ -59,12 +69,14 @@ hexDigitsToChar =
   .> either (toString .> fail) return -- handle read error
 
 -- | Parse a symbol, which consists of alphanumeric or allowed special characters.
-pSymbol :: Parser AST
+pSymbol :: Parser Text
 pSymbol = (
   choice [ alphaNumChar, oneOf allowedSpecials ]
   |> label "allowed symbol char"
   |> some
-  ) <&> toText .> ASTSymbol
+  ) <&> toText
+
+-- Parsers ---------------------------------------------------------------------
 
 -- | Parse an escaped char. All escape sequences from ascii(7) are recognized,
 -- also \e results in the ESC character (0x1B) and \x??, \u???? and \U??????
@@ -136,3 +148,27 @@ pText = (
   |> (char '"' *>)
   |> (<* char '"')
   ) <&> toText
+
+-- | Parse an integer literal.
+-- It can have an optional prefix: 0b, 0o or 0x
+-- for binary, octal and hexadecimal.
+-- Also, underscores are ignored.
+pInt :: Parser Integer
+pInt =
+  choice -- parse optional prefix, select char validator and base
+    [ string "0b" $> (02, (`elem` ['0', '1']))
+    , string "0o" $> (08, isOctDigit)
+    , string "0x" $> (16, isHexDigit)
+    , pure           (10, isDigit) ]
+  >>= \(base, valid) -> choice -- parse a valid char or underscore
+    [ satisfy valid <&> Just
+    , char '_'       $> Nothing ]
+  |> some               -- an integer has some chars
+  |> fmap (             -- [Char] -> Integer conversion
+    catMaybes           -- take only valid chars
+    .> foldl' (\res ->  -- from left to right:
+      digitToInt        -- interpret current char as digit
+      .> toInteger
+      .> (+ res * base) -- add to result, shifted by base
+    ) 0
+  )

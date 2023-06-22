@@ -4,7 +4,7 @@ module Main where
 import Flow            ((|>))
 import Text.Megaparsec (MonadParsec (eof), Parsec, errorBundlePretty, runParser)
 
-import Parser (pText)
+import Parser
 
 run :: (Show a) => Parsec Void Text a -> Text -> IO ()
 run p t =
@@ -13,4 +13,4 @@ run p t =
   |> putStrLn
 
 main :: IO ()
-main = run pText "\"\\a\\b\\c\\\"'\\'\NUL\\x42\\u1337\\U10FFFF\""
+main = run pAST "0o755_123"
