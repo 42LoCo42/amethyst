@@ -3,22 +3,33 @@ module Parser where
 
 import Prelude hiding (many, some)
 
-import Flow                 ((.>), (|>))
-import Text.Megaparsec      (MonadParsec (label), Parsec, anySingle, choice,
-                             many, noneOf, oneOf, satisfy, some, (<?>))
+import Flow ((.>), (|>))
+
+import Data.Char  (digitToInt, isDigit, isHexDigit, isOctDigit)
+import Data.Ratio ((%))
+
+import Text.Megaparsec      (MonadParsec (label, try), Parsec, anySingle,
+                             choice, many, noneOf, oneOf, satisfy, some, (<?>))
 import Text.Megaparsec.Char (alphaNumChar, char, hexDigitChar, string)
 
-import Data.Char (digitToInt, isDigit, isHexDigit, isOctDigit)
-import Types     (AST (..))
+import Types (AST (..))
 
 type Parser = Parsec Void Text
 
+-- | Parse a single AST node.
 pAST :: Parser AST
-pAST = choice
+pAST = pAST' id
+
+-- | Parse a single AST node under a transformation of the individual parsers.
+pAST' :: (Parser AST -> Parser AST) -> Parser AST
+pAST' transform =
   [ pChar   <&> ASTChar
   , pText   <&> ASTText
+  , pFrac   <&> ASTFrac
   , pInt    <&> ASTInt
   , pSymbol <&> ASTSymbol ]
+  <&> (transform .> try)
+  |> choice
 
 -- Utilities -------------------------------------------------------------------
 
@@ -172,3 +183,6 @@ pInt =
       .> (+ res * base) -- add to result, shifted by base
     ) 0
   )
+
+pFrac :: Parser Rational
+pFrac = liftA2 (%) (pInt <* char '/') pInt
