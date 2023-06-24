@@ -8,13 +8,18 @@ import Flow ((.>), (|>))
 import Data.Char  (digitToInt, isDigit, isHexDigit, isOctDigit)
 import Data.Ratio ((%))
 
-import Text.Megaparsec      (MonadParsec (label, try), Parsec, anySingle,
-                             choice, many, noneOf, oneOf, satisfy, some, (<?>))
-import Text.Megaparsec.Char (alphaNumChar, char, hexDigitChar, string)
+import Text.Megaparsec       (MonadParsec (label, try), Parsec, anySingle,
+                              choice, many, noneOf, oneOf, satisfy, some, (<?>))
+import Text.Megaparsec.Char  (alphaNumChar, char, hexDigitChar, string)
+import Text.Megaparsec.Debug (dbg)
 
 import Types (AST (..))
 
 type Parser = Parsec Void Text
+
+debug :: Show a => String -> Parser a -> Parser a
+-- debug s = id
+debug = dbg
 
 -- | Parse a single AST node.
 pAST :: Parser AST
@@ -23,11 +28,11 @@ pAST = pAST' id
 -- | Parse a single AST node under a transformation of the individual parsers.
 pAST' :: (Parser AST -> Parser AST) -> Parser AST
 pAST' transform =
-  [ pChar   <&> ASTChar
-  , pText   <&> ASTText
-  , pFrac   <&> ASTFrac
-  , pInt    <&> ASTInt
-  , pSymbol <&> ASTSymbol ]
+  [ dbg "char" pChar   <&> ASTChar
+  , dbg "text" pText   <&> ASTText
+  , dbg "frac" pFrac   <&> ASTFrac
+  , dbg "int " pInt    <&> ASTInt
+  , dbg "symb" pSymbol <&> ASTSymbol ]
   <&> (transform .> try)
   |> choice
 
