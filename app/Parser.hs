@@ -8,10 +8,13 @@ import Flow ((.>), (|>))
 import Data.Char  (digitToInt, isDigit, isHexDigit, isOctDigit)
 import Data.Ratio ((%))
 
-import Text.Megaparsec       (MonadParsec (label, try), Parsec, anySingle,
-                              choice, many, noneOf, oneOf, satisfy, some, (<?>))
-import Text.Megaparsec.Char  (alphaNumChar, char, hexDigitChar, string)
-import Text.Megaparsec.Debug (dbg)
+import Text.Megaparsec            (MonadParsec (hidden, label, try), Parsec,
+                                   anySingle, choice, many, noneOf, oneOf,
+                                   satisfy, skipMany, skipSome, some, (<?>))
+import Text.Megaparsec.Char       (alphaNumChar, char, hexDigitChar, space1,
+                                   string)
+import Text.Megaparsec.Char.Lexer (skipBlockCommentNested, skipLineComment)
+import Text.Megaparsec.Debug      (dbg)
 
 import Types (AST (..))
 
@@ -93,6 +96,31 @@ pSymbol = (
   ) <&> toText
 
 -- Parsers ---------------------------------------------------------------------
+
+-- | Parse a line comment, starting with a #. The space is mandatory.
+pLineComment :: Parser ()
+pLineComment = skipLineComment "# "
+
+-- | Parse a block comment (literally a {} block with comment/# signs).
+pBlockComment :: Parser ()
+pBlockComment = skipBlockCommentNested "#{" "}#"
+
+-- | Parse a single type of space (character, line comment, block comment)
+pSpaceRaw :: Parser ()
+pSpaceRaw =
+  [ space1
+  , pLineComment
+  , pBlockComment ]
+  |> map hidden
+  |> choice
+
+-- | Parse any amount of whitespace.
+pSpace0 :: Parser ()
+pSpace0 = skipMany pSpaceRaw
+
+-- | Parse a nonzero amount of whitespace
+pSpace1 :: Parser ()
+pSpace1 = skipSome pSpaceRaw
 
 -- | Parse an escaped char. All escape sequences from ascii(7) are recognized,
 -- also \e results in the ESC character (0x1B) and \x??, \u???? and \U??????
