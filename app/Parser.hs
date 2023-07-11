@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Parser where
+module Parser (pAST, pAST') where
 
 import Prelude hiding (many, some)
 
@@ -10,9 +10,9 @@ import Data.Ratio ((%))
 
 import Text.Megaparsec            (MonadParsec (hidden, label, try), Parsec,
                                    anySingle, choice, many, noneOf, oneOf,
-                                   satisfy, skipMany, skipSome, some, (<?>))
-import Text.Megaparsec.Char       (alphaNumChar, char, hexDigitChar, space1,
-                                   string)
+                                   satisfy, sepEndBy, skipMany, some, (<?>))
+import Text.Megaparsec.Char       (alphaNumChar, char, hexDigitChar, hspace1,
+                                   space1, string)
 import Text.Megaparsec.Char.Lexer (skipBlockCommentNested, skipLineComment)
 import Text.Megaparsec.Debug      (dbg)
 
@@ -20,9 +20,9 @@ import Types (AST (..))
 
 type Parser = Parsec Void Text
 
-debug :: Show a => String -> Parser a -> Parser a
--- debug s = id
-debug = dbg
+dbg' :: Show a => String -> Parser a -> Parser a
+-- dbg' = flip const
+dbg' = dbg
 
 -- | Parse a single AST node.
 pAST :: Parser AST
@@ -31,11 +31,14 @@ pAST = pAST' id
 -- | Parse a single AST node under a transformation of the individual parsers.
 pAST' :: (Parser AST -> Parser AST) -> Parser AST
 pAST' transform =
-  [ dbg "char" pChar   <&> ASTChar
-  , dbg "text" pText   <&> ASTText
-  , dbg "frac" pFrac   <&> ASTFrac
-  , dbg "int " pInt    <&> ASTInt
-  , dbg "symb" pSymbol <&> ASTSymbol ]
+  [ dbg' "char" pChar   <&> ASTChar
+  , dbg' "text" pText   <&> ASTText
+  , dbg' "frac" pFrac   <&> ASTFrac
+  , dbg' "int " pInt    <&> ASTInt
+  , dbg' "sym " pSymbol <&> ASTSymbol
+  , dbg' "tup " pTup    <&> ASTTup
+  , dbg' "arr " pArr    <&> ASTArr
+  , dbg' "blk " pBlk    <&> ASTBlk ]
   <&> (transform .> try)
   |> choice
 
@@ -57,7 +60,7 @@ allowedSpecials =
   , '+'
   -- , ',' -- TODO maybe make , special for unquote? depends on macro system
   , '-'
-  -- , '.' -- for element access
+  , '.' -- for element access
   , '/'
   , ':'
   , ';'
@@ -106,21 +109,21 @@ pBlockComment :: Parser ()
 pBlockComment = skipBlockCommentNested "#{" "}#"
 
 -- | Parse a single type of space (character, line comment, block comment)
-pSpaceRaw :: Parser ()
-pSpaceRaw =
-  [ space1
+pSpaceRaw :: Parser () -> Parser ()
+pSpaceRaw p =
+  [ p
   , pLineComment
   , pBlockComment ]
   |> map hidden
   |> choice
 
 -- | Parse any amount of whitespace.
-pSpace0 :: Parser ()
-pSpace0 = skipMany pSpaceRaw
+pSpace :: Parser ()
+pSpace = pSpaceRaw space1 |> skipMany
 
--- | Parse a nonzero amount of whitespace
-pSpace1 :: Parser ()
-pSpace1 = skipSome pSpaceRaw
+-- | Parse any amount of horizontal whitespace.
+pHSpace :: Parser ()
+pHSpace = pSpaceRaw hspace1 |> skipMany
 
 -- | Parse an escaped char. All escape sequences from ascii(7) are recognized,
 -- also \e results in the ESC character (0x1B) and \x??, \u???? and \U??????
@@ -217,5 +220,27 @@ pInt =
     ) 0
   )
 
+-- | Parse a fraction: two integers separated by /
 pFrac :: Parser Rational
 pFrac = liftA2 (%) (pInt <* char '/') pInt
+
+-- | Parse many AST nodes in a list, specified by two surrounding chars
+pListRaw :: (Char, Char) -> Parser [AST]
+pListRaw (l, r) = char l *> pSpace *> pAST `sepEndBy` pSpace <* char r
+
+-- | Parse a tuple: items surrounded by ()
+pTup :: Parser [AST]
+pTup = pListRaw ('(', ')')
+
+-- | Parse an array: items surrounded by []
+pArr :: Parser [AST]
+pArr = pListRaw ('[', ']')
+
+-- | Parse a block: a list of lines surrounded by {}
+-- A line is a tuple without the surrounding ()
+-- and ends on a linebreak.
+pBlk :: Parser [[AST]]
+pBlk =
+  char '{' *> pSpace *>
+  (pAST `sepEndBy` pHSpace) `sepEndBy` pSpace
+  <* char '}'

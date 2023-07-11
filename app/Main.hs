@@ -6,4 +6,4 @@ import Text.Megaparsec (MonadParsec (eof), parseTest)
 import Parser
 
 main :: IO ()
-main = parseTest (pAST' (<* eof)) "0x16t"
+main = parseTest (pAST' (<* eof)) "~/foo/bar/baz"
