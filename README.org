@@ -1,0 +1,123 @@
+* Amethyst - Initial Design Ideas
+*note*: the code currently in this repo is just me playing around,
+nothing of this is guaranteed to be used
+
+*note*: this is all super WIP
+
+** Some goals
+- static, strong typing
+- functional, declarative, lazy only when needed (to combat space leaks)
+- POSIX C as primary target (probably via code generation)
+- extreme generalization & simplification of otherwise distinct concepts
+  - functions and types are values too
+  - concrete and interface types → every type can have unimplemented fields
+  - inheritance, implementation, composability → every type can contain
+    delegate types with varying degrees of implementation completeness
+  - runtime vs. compiletime evaluation
+    - any function can run in any context by default
+    - for e.g. code generation: compiler fields are required; only present at compiletime
+  - modules, packages etc. → files & folders are just structs,
+    no mucking about with weird import logic or restrictions
+    (yes circular imports are allowed, this isn't <any modern language>)
+- extreme amounts of caching & minimal recompilation on changes
+- leads to: ability to build libraries as well as binaries
+- interactive by default
+- leads to: *interpreted* by default, compiler is just another AMT program
+- *most important goal*: don't overcomplicate the language,
+  it should be *pragmatic*, not a vessel for research
+  or for showing off how much of a super smart 10x Rust developer you are
+
+** Things to compare/steal stuff from
+- LISP: macros and language ideas in general (i 💜 lisp fr fr)
+- Haskell: ghci (very usable & fast REPL)
+- Unison: content-addressed declarations, abilities
+- C/Go: simplicity and ease of use (yes i just called C simple, cry about it)
+
+** Things that are *bad*, compare to *avoid* stuff done there
+- Rust: extreme complexity, ludicrous compile times, constant fighting with the borrow checker
+- Go: often *too* simple, at least for my style of programming
+- Java/modern OP: cringe, way too complex for what it achieves,
+  just give me types that can contain and defer to other types
+
+** Random scribbles
+#+begin_src conf
+  #!/usr/bin/env amti
+  # shebang is supported (amti is interactive-amethyst aka. the interpreter)
+  # comments use # (imagine typing >1 chars to disable stuff)
+  # also we DON'T use spaces for indent, ONLY tabs
+  # pls ignore the fact that orgmode converts all the tabs back :'(
+
+  # all values need a type annotation
+  # type inference is slow and produces horrendous error messages when it fails
+  answer: i32 = 42
+
+  # type aliases are literally just values of type Type with value = another type
+  # i am obsessed with generalization
+  Text: Type = List u8
+  Bytes: Type = List u8
+  # but contrary to Haskell, types are compared nominally (by name)
+  # so Text and Bytes are actually different
+  # this allows for different implementations on top of the underlying data
+  # e.g. Text requires a trailing nullbyte (for C interop) and valid UTF-8
+  # bytes has no restrictions
+
+  # a struct
+  User: Type = {
+      name: Text
+      secretKey: Bytes
+  }
+
+  # a simple enum aka variant type
+  SystemState: Type = Off | Starting | On | Stopping
+
+  # enum with values, also tuples
+  LengthUnit: Type
+      = Meter 1
+      | Feet 0.3048
+      | Furlong 201.168
+      | VariantsDontNeedTheSameTypes "yes" (42 13.37)
+      | AlsoTheyCanBeAsComplexAsYouLike {
+          foo: Map Text User
+          bar: (f32 f64 f128) # do we need f128?
+          baz: (c32 c64) # do we need complex numbers as primitive types?
+      }
+
+  anyUnit: LengthUnit = Furlong
+  meterUnit: Meter = Meter # enum values are subtypes and their only respective value
+
+  # generic variant type
+  Option: (t: Type) -> Type = Some t | None
+
+  # types can have default values too
+  System: Type = {
+      users: Map Text User = [{
+          name = "admin"
+          secretKey = "1b9R4jaiABdRF08K/DPTEQ==".fromB64
+      }] | listToMapBy name # funni transmutation go brrr
+  }
+
+  # functions/methods are the same
+  # dot syntax exists for types matching the first parameter
+  # also, we see another way of getting parameters (literally just a lambda)
+  fromB64: Text -> Bytes = t -> todo "i won't write a whole b64 impl here lol"
+
+  # pattern matching
+  showSystemState: SystemState -> Text = match {
+      Off -> "The system is currently offline"
+      Starting -> "Please wait, the system is starting"
+      On -> "Everything is running!"
+      Stopping -> "Caution, the system is going down"
+  }
+
+  # multiple parameters, any type, side effects
+  trace: (msg: Text) a -> {IO} a = {
+      print msg # requires the IO ability
+      a # last value in block is returned
+      # TODO: how should this work with struct decls?
+  }
+
+  # idk what more to put, will update when more ideas arrive
+#+end_src
+
+** This language is stupid, you are stupid, you are probably just tripping while writing this
+yes
