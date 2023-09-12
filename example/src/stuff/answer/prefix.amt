@@ -1,0 +1,8 @@
+what: Text Text Text Show -> Text =
+	x1 x2 x3 val -> "The answer to the Ultimate Question of ${x1}, ${x2} and ${x3} is ${val}."
+
+where: (Text Text Text) = (
+	"the Universe"
+	"Everything"
+	"Life"
+)

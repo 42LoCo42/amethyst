@@ -1,0 +1,26 @@
+# src means current package (cuz it has the src folder)
+# also src imports always come first (looks better)
+# all other imports are ordered alphabetically
+use src.stuff
+
+# these come from the amt dependency, aka the standard library
+# maybe some of them will be imported by default? (cmp. Haskell Prelude)
+use amt.io.IO
+use amt.io.print
+
+use vendored.bla
+
+# print needs the IO ability and returns void
+# since void is a builtin type, it does not have to be imported
+main: {IO} void = {
+	print "Hello, World!"
+
+	# pipes can be used to pass a return value to another function
+	# _ is a hole, creates a single-argument lambda
+	# or use _1 _2 _3 ... in any order (highest = number of args)
+	# or use actual named parameters for more complex lambdas
+	3 + 2 + 1 | stuff.answer.calc _ 7 | print
+
+	# the last expression in a block is returned
+	print bla.msg
+}

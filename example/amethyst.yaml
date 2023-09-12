@@ -1,0 +1,20 @@
+deps:
+  amt: # can be any name
+    url: https://github.com/42LoCo42/amethyst # all deps are git repos
+    rev: v0.4.2 # tag or commit hash
+    dir: stdlib
+    # branch is not needed, rev uniquely identifies anything
+
+  # deps can be added via the amt command
+  # amt add git@example.com:johnsmith/project -b develop
+  project: # last component of URI by default, or use -n <name>
+    url: git@example.com:johnsmith/project
+    rev: dcf88590bfca09bbae1d5f566b56597f61e8696c # automatically fetched, or use -r <rev>
+    # no dir specified means root dir of repo, or use -d <dir>
+
+bins:
+  example: src.foo.bar.main   # include path to symbol, src = this package
+  another: project.things.run # can use other packages too
+
+libs:
+  stuff: src.stuff # only path, will be included recursively

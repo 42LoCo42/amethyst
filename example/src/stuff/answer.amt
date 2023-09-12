@@ -1,0 +1,9 @@
+use src.stuff.answer.prefix
+
+calc: i32 i32 -> Text =
+	a b ->
+		prefix.what
+			prefix.where.2
+			prefix.where.0
+			prefix.where.1
+			"${a * b}"

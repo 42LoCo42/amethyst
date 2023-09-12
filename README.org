@@ -39,85 +39,179 @@ nothing of this is guaranteed to be used
 - Java/modern OP: cringe, way too complex for what it achieves,
   just give me types that can contain and defer to other types
 
-** Random scribbles
-#+begin_src conf
-  #!/usr/bin/env amti
-  # shebang is supported (amti is interactive-amethyst aka. the interpreter)
-  # comments use # (imagine typing >1 chars to disable stuff)
-  # also we DON'T use spaces for indent, ONLY tabs
-  # pls ignore the fact that orgmode converts all the tabs back :'(
-
-  # all values need a type annotation
-  # type inference is slow and produces horrendous error messages when it fails
-  answer: i32 = 42
-
-  # type aliases are literally just values of type Type with value = another type
-  # i am obsessed with generalization
-  Text: Type = List u8
-  Bytes: Type = List u8
-  # but contrary to Haskell, types are compared nominally (by name)
-  # so Text and Bytes are actually different
-  # this allows for different implementations on top of the underlying data
-  # e.g. Text requires a trailing nullbyte (for C interop) and valid UTF-8
-  # bytes has no restrictions
-
-  # a struct
-  User: Type = {
-      name: Text
-      secretKey: Bytes
-  }
-
-  # a simple enum aka variant type
-  SystemState: Type = Off | Starting | On | Stopping
-
-  # enum with values, also tuples
-  LengthUnit: Type
-      = Meter 1
-      | Feet 0.3048
-      | Furlong 201.168
-      | VariantsDontNeedTheSameTypes "yes" (42 13.37)
-      | AlsoTheyCanBeAsComplexAsYouLike {
-          foo: Map Text User
-          bar: (f32 f64 f128) # do we need f128?
-          baz: (c32 c64) # do we need complex numbers as primitive types?
-      }
-
-  anyUnit: LengthUnit = Furlong
-  meterUnit: Meter = Meter # enum values are subtypes and their only respective value
-
-  # generic variant type
-  Option: (t: Type) -> Type = Some t | None
-
-  # types can have default values too
-  System: Type = {
-      users: Map Text User = [{
-          name = "admin"
-          secretKey = "1b9R4jaiABdRF08K/DPTEQ==".fromB64
-      }] | listToMapBy name # funni transmutation go brrr
-  }
-
-  # functions/methods are the same
-  # dot syntax exists for types matching the first parameter
-  # also, we see another way of getting parameters (literally just a lambda)
-  fromB64: Text -> Bytes = t -> todo "i won't write a whole b64 impl here lol"
-
-  # pattern matching
-  showSystemState: SystemState -> Text = match {
-      Off -> "The system is currently offline"
-      Starting -> "Please wait, the system is starting"
-      On -> "Everything is running!"
-      Stopping -> "Caution, the system is going down"
-  }
-
-  # multiple parameters, any type, side effects
-  trace: (msg: Text) a -> {IO} a = {
-      print msg # requires the IO ability
-      a # last value in block is returned
-      # TODO: how should this work with struct decls?
-  }
-
-  # idk what more to put, will update when more ideas arrive
+* Learning Amethyst
+** Project layout
+#+begin_src text
+  example
+  ├── amethyst.yaml
+  ├── deps
+  │   ├── amt -> ../../../../.cache/amethyst/pkgs/e14136b904b86303ec62be999b00d5b6eb2d0ec5d738e9aa7f8bb6ba62f84185/v0.4.2/stdlib
+  │   ├── project -> ../../../../.cache/amethyst/pkgs/1ae63883e378721af8d8ba2fbbcf6a5953fee6b12b2befb2a11fc23fcf1cfc54/dcf88590bfca09bbae1d5f566b56597f61e8696c
+  │   └── vendored
+  │       └── bla.amt
+  └── src
+      ├── foo
+      │   └── bar.amt
+      └── stuff
+          ├── answer
+          │   └── prefix.amt
+          └── answer.amt
 #+end_src
 
-** This language is stupid, you are stupid, you are probably just tripping while writing this
-yes
+- [[file:example/amethyst.yaml][amethyst.yaml]]: Package description, declares:
+  - (non-vendored) dependencies
+  - binary outputs
+  - library outputs
+- deps: where dependencies are vendored or symlinked to the cache
+  - structure of symlink:
+    - .cache/amethyst/pkg
+    - sha256 of Git URL (~url~)
+    - Git revision (~rev~)
+    - optional directory suffix (~dir~)
+  - symlinks are checked everytime Amethyst runs and changed when neccessary
+  - only vendored deps are version-tracked
+  - deps can also be provided by ~AMT_DEP_name=path~ environment variables
+  - ~.cache/amethyst/proj~ holds links to all amethyst projects,
+    which backlink to ~pkgs~ -> garbage collection possible
+    (all folders in ~pkgs~ which are not referenced by any known project)
+- src: source code of current package
+  - foo: folders are just structs with files as fields
+  - stuff.answer: when both a file and a folder are present,
+    the values of the file are merged over the folder
+    and the resulting struct will be imported instead of any of them separately
+
+** Builtin types
+- bool
+- signed: i8 i16 i32 i64
+- unsigned: u8 u16 u32 u64
+- floating: f32 f64
+- (maybe) complex: c32 c64
+- metatypes: type = prim | struct
+- void, voidptr
+
+** Some higher-order types
+- collections: List t = [t], Map k v = [k: v], Tree t
+- simple variants: Option t = t?, Either l r
+- Bytes = List u8, Text = List u8 and requires UTF-8 and trailing nullbyte
+- (maybe) TVar, MVar, STM (if i feel like it lol)
+
+** Values
+- declaration ("decl"): associates type to symbol
+- definition  ("defn"): extends declaration with a default value
+- this means: every definition is a declaration
+#+begin_src conf
+  foo: i32      # declaration
+  bar: u8 = 127 # definition
+#+end_src
+- bare decls not allowed at toplevel of file, must be defns
+- toplevel decls are scanned & injected into scope before evaluation
+  -> decls aren't order-dependent like in C
+
+** Using/Importing stuff
+#+begin_src conf
+  use src.foo.bar
+  use some.thing as xyz
+#+end_src
+- makes last component of path avialable in current scope
+- optionally under different name with ~as~
+- first component is package
+  - ~src~ always means the current package
+  - other names must exist in the ~deps~ folder
+
+** Custom types
+#+begin_src conf
+  # type alias
+  Foo: type = Text
+  # types are compared by name, not by value
+  # so Text != Foo (unlike Haskell)
+
+  # struct type
+  User: type = {
+      name: Text
+      key: Bytes
+  }
+
+  # variant type
+  State: type = Shutdown | Crashed | Running
+
+  # ...with fields
+  State: type
+      = Shutdown
+      | Crashed (msg: Text)
+      | Running (hostname: Text) (ip: Bytes)
+
+  # ...with values
+  LengthUnit: type
+      = Meter   1
+      | Feet    0.3048
+      | Furlong 201.168
+
+  # type constructor (just a function returning type, nothing special)
+  LinkedList: (t: type) -> type = Node t (LinkedList t) | Nil
+#+end_src
+
+** Functions
+#+begin_src conf
+  # -> denotes a function type
+  # multiple params are separated by space
+  # params can be declarations
+  greet: (whom: Text) (what: Text) -> Text = "Good ${what}, ${whom}!"
+
+  # functions are called by passing arguments separated by space
+  someGreeting: Text = greet "admin" "evening" # "Good evening, admin!"
+
+  # functions can return functions (-> separates "phases" of function calls)
+  # funcions can be partially applied
+  mkGreeting: (whom: Text) -> Text -> Text = greet whom
+#+end_src
+
+** Lambdas
+#+begin_src conf
+  # named parameters
+  add: i32 i32 -> i32 = a b -> a + b
+
+  # single hole
+  inc: i32 -> i32 = _ + 1
+
+  # multiple holes
+  add: i32 i32 -> i32 = _1 + _2
+
+  # partial application
+  inc: i32 -> i32 = add 1
+#+end_src
+
+** Collections
+#+begin_src conf
+  tuple: (Text i32 bool) = ("answer" 42 true)
+
+  list: List u64 = [
+       2  3  5  7 11
+      13 17 19 23 29
+  ]
+
+  map: Map Text bool = {
+      "yes": true
+      "ok": true
+      "no": false
+      "nah": false
+  }
+#+end_src
+
+** Pattern matching
+#+begin_src conf
+  # simple value match, implicit argument
+  verySecureAdminCheck: (user: Text) -> bool = match {
+      "admin" -> true
+      "root" -> true
+      _ -> false # _ matches anything
+  }
+
+  # structural match, explicit argument
+  map: (a -> b) [a] -> [b] = f list -> match list {
+      Nil -> Nil
+      Node a rest -> Node (f a) (map f rest)
+  }
+#+end_src
+
+* When will this be implemented?
+soon(TM)
