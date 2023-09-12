@@ -87,7 +87,8 @@ Check out the [[file:example/][example]] project for this!
 - unsigned: ~u8 u16 u32 u64~
 - floating: ~f32 f64~
 - (maybe) complex: ~c32 c64~
-- metatypes: ~type = prim | struct~
+- metatypes: ~type = prim | struct | ...~
+  TODO: expand when implementing the type system
 - ~void voidptr~
 
 ** Some higher-order types
@@ -213,6 +214,12 @@ Check out the [[file:example/][example]] project for this!
       Node a rest -> Node (f a) (map f rest)
   }
 #+end_src
+
+* TODOs
+- TODO: more usage examples
+- TODO: how to handle {} expressions?
+  - ambiguous when block {} returns struct {} in type decl
+- TODO: design amti (interactive Amethyst environment)
 
 * When will this be implemented?
 soon(TM)
