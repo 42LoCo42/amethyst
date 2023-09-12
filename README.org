@@ -41,6 +41,7 @@ nothing of this is guaranteed to be used
 
 * Learning Amethyst
 ** Project layout
+Check out the [[file:example/][example]] project for this!
 #+begin_src text
   example
   ├── amethyst.yaml
@@ -62,9 +63,9 @@ nothing of this is guaranteed to be used
   - (non-vendored) dependencies
   - binary outputs
   - library outputs
-- deps: where dependencies are vendored or symlinked to the cache
+- ~deps~: where dependencies are vendored or symlinked to the cache
   - structure of symlink:
-    - .cache/amethyst/pkg
+    - path to =~/.cache/amethyst/pkgs=
     - sha256 of Git URL (~url~)
     - Git revision (~rev~)
     - optional directory suffix (~dir~)
@@ -74,26 +75,26 @@ nothing of this is guaranteed to be used
   - ~.cache/amethyst/proj~ holds links to all amethyst projects,
     which backlink to ~pkgs~ -> garbage collection possible
     (all folders in ~pkgs~ which are not referenced by any known project)
-- src: source code of current package
-  - foo: folders are just structs with files as fields
-  - stuff.answer: when both a file and a folder are present,
+- ~src~: source code of current package
+  - ~foo~: folders are just structs with files as fields
+  - ~stuff.answer~: when both a file and a folder are present,
     the values of the file are merged over the folder
     and the resulting struct will be imported instead of any of them separately
 
 ** Builtin types
-- bool
-- signed: i8 i16 i32 i64
-- unsigned: u8 u16 u32 u64
-- floating: f32 f64
-- (maybe) complex: c32 c64
-- metatypes: type = prim | struct
-- void, voidptr
+- ~bool~
+- signed: ~i8 i16 i32 i64~
+- unsigned: ~u8 u16 u32 u64~
+- floating: ~f32 f64~
+- (maybe) complex: ~c32 c64~
+- metatypes: ~type = prim | struct~
+- ~void voidptr~
 
 ** Some higher-order types
-- collections: List t = [t], Map k v = [k: v], Tree t
-- simple variants: Option t = t?, Either l r
-- Bytes = List u8, Text = List u8 and requires UTF-8 and trailing nullbyte
-- (maybe) TVar, MVar, STM (if i feel like it lol)
+- collections: ~List t = [t]~, ~Map k v = [k: v]~, ~Tree t~
+- simple variants: ~Option t = t?~, ~Either l r~
+- ~Bytes = List u8~, ~Text = List u8~ and requires UTF-8 and trailing nullbyte
+- (maybe) ~TVar MVar STM~ (if i feel like it lol)
 
 ** Values
 - declaration ("decl"): associates type to symbol
